@@ -79,7 +79,8 @@ L.WikimapiaAPI = L.Class.extend({
 
     , initialize: function (options) {
         L.setOptions(this, options);
-        this._hash={};
+        this._hash = {};
+        this._mouseIsDown = false;
     }
 
     , setOptions: function (newOptions) {
@@ -95,6 +96,8 @@ L.WikimapiaAPI = L.Class.extend({
         map.on('zoomend', this._update, this);
         map.on('mousemove', this._mousemove, this);
         map.on('mouseout', this._mouseout, this);
+        map.on('mousedown', this._mousedown, this);
+        map.on('mouseup', this._mouseup, this);
 
         this._update();
     }
@@ -106,6 +109,9 @@ L.WikimapiaAPI = L.Class.extend({
         map.off('zoomend', this._update, this);
         map.off('mousemove', this._mousemove, this);
         map.off('mouseout', this._mouseout, this);
+        map.off('mousedown', this._mousedown, this);
+        map.off('mouseup', this._mouseup, this);
+
 
     }
 
@@ -162,41 +168,59 @@ L.WikimapiaAPI = L.Class.extend({
     }
 
     , _mousemove: function (e) {
+
     	var that = this;
 
-        if (that.mouseMoveTimer) {
-        	window.clearTimeout(that.mouseMoveTimer);
-        }
+    	if (!that._mouseIsDown) {
 
-		that.mouseMoveTimer = window.setTimeout(function() {
+	        if (that.mouseMoveTimer) {
+	        	window.clearTimeout(that.mouseMoveTimer);
+	        }
+
+			that.mouseMoveTimer = window.setTimeout(function() {
 
 
-	    	var point = e.latlng
-	    		, features = that._filter(that._hash, function (item) {
-	    			return (item.bounds.contains(point) && that._pointInPolygon(point, item.polygon))
-	    		});
+		    	var point = e.latlng
+		    		, features = that._filter(that._hash, function (item) {
+		    			return (item.bounds.contains(point) && that._pointInPolygon(point, item.polygon))
+		    		});
 
-	    		if (features.length>0) {
-	    			var feature = (features.length == 1 ? features[0] : that._chooseBestFeature(features));
-	    			that._showFeature(feature);
-				} else {
-					that._hideFeature();
-				}
+		    		if (features.length>0) {
+		    			var feature = (features.length == 1 ? features[0] : that._chooseBestFeature(features));
+		    			that._showFeature(feature);
+					} else {
+						that._hideFeature();
+					}
 
-	    }, 0);
+		    }, 0);
+    	}
+    }
+
+    , _mousedown: function () {
+    	var that = this;
+    	that._mouseIsDown = true;
+    }
+
+    , _mouseup: function () {
+    	var that = this;
+    	that._mouseIsDown = false;
     }
 
     , _chooseBestFeature: function (features) {
 		var that = this
-			, bestLookingArea = that._boundsArea(that._map.getBounds())/10
+			, bestLookingArea = that._boundsArea(that._map.getBounds())/12
 			, bestFeatureIndex = 0
-			, bestFeatureArea = that._boundsArea(features[0].bounds);
+			, bestFeatureScale = that._boundsArea(features[0].bounds)/bestLookingArea;
+		if (bestFeatureScale < 1) {bestFeatureScale = 1/bestFeatureScale}
 
 		for (var i=1; i<features.length;i++) {
-			var featureArea = that._boundsArea(features[i].bounds);
-			if (Math.abs(featureArea-bestLookingArea)<Math.abs(bestFeatureArea-bestLookingArea)) {
+			var featureArea = that._boundsArea(features[i].bounds)
+				, featureScale = featureArea/bestLookingArea;
+			if (featureScale < 1) {featureScale = 1/featureScale}
+
+			if (featureScale<bestFeatureScale) {
 				bestFeatureIndex = i;
-				bestFeatureArea = featureArea;
+				bestFeatureScale = featureScale;
 			}
 		}
 
