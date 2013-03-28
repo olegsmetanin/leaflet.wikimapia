@@ -378,7 +378,9 @@ pre.prettyprint {
         key : '60175C48-4B0C86C-A2D4D106-A5F37CAF-5A760C96-45526DF2-6D90C63B-511E68EE'
         , onActiveFeature: function (feature, layer) {
           if (feature.name && feature.url) {
-              layer.bindPopup('<a target="_blank" href="'+feature.url+'">'+ feature.name + '</a>');
+              layer
+                .bindLabel(feature.name)
+                .bindPopup('<a target="_blank" href="'+feature.url+'">'+ feature.name + '</a>');
           }
         }
         , style: function(feature) {

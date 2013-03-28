@@ -181,10 +181,13 @@ L.WikimapiaAPI = L.Class.extend({
 			}
 
 			that._feature.polygon
-				.on('mouseout', function () {
-					that._hideFeature();
+				.on('mouseout', function (e) {
+					// Dirty hack to track mouseout from map hover on polygon
+					var size = that._map.getSize();
+					if (e.containerPoint.x<0 || e.containerPoint.y<0 || e.containerPoint.x>(size.x-10) || e.containerPoint.y>(size.y-10)) {
+						that._hideFeature();
+					}
 				})
-				.bindLabel(that._feature.name)
 				.addTo(that._map);
 
 		}
