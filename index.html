@@ -215,26 +215,51 @@ pre.prettyprint {
 &lt;script&gt;
     var map = L.map('map').setView([55.751667, 37.617778], 13);
     L.control.scale().addTo(map);
-    L.tileLayer('http://{s}.tile.cloudmade.com/BC9A493B41014CAABB98F0471D759707/997/256/{z}/{x}/{y}.png', {
-         maxZoom: 18
-        , attribution: 'Map data &amp;copy; &lt;a href=&quot;http://openstreetmap.org&quot;&gt;OpenStreetMap&lt;/a&gt; contributors, &lt;a href=&quot;http://creativecommons.org/licenses/by-sa/2.0/&quot;&gt;CC-BY-SA&lt;/a&gt;, Imagery &#xfffd; &lt;a href=&quot;http://cloudmade.com&quot;&gt;CloudMade&lt;/a&gt;'
-        }).addTo(map);
+    <b>
+    /*
+     * Fix Leaflet 0.5.1 L.Util.template for Wikimapia tile layer url hash property
+     * If property is function  - call it
+     */
 
-    <b>var wiki= new L.WikimapiaAPI({
-        key : 'WikipediaAPIKey'
-        , onActiveFeature: function (feature, layer) {
-          if (feature.name && feature.url) {
-              layer.bindPopup('&lt;a target="_blank" href="'+feature.url+'"&gt;'+ feature.name + '&lt;/a&gt;');
-          }
+    L.Util.template = function (str, data) {
+      return str.replace(/\{ *([\w_]+) *\}/g, function (str, key) {
+        var value = data[key];
+        if (!data.hasOwnProperty(key)) {
+          throw new Error('No value provided for variable ' + str);
+        } else if (typeof value === 'function') {
+          value = value(data);
         }
-        , style: function(feature) {
-          switch (feature.name) {
-              case 'Kitai-gorod': return {color: "#ff0000"};
-          }
-      }
-      });
 
-      wiki.addTo(map)
+        return value;
+      });
+    }
+
+    L.tileLayer('http://{s}{hash}.wikimapia.org/?x={x}&y={y}&zoom={z}&r=7071412&type=&lng=1', {
+      // Fix L.Util.template to use this
+      hash: function (data) {
+        return data.x % 4 + (data.y % 4) *4;
+      }
+      , subdomains : 'i'
+      , maxZoom: 18
+      , attribution: '&lt;a href="http://wikimapia.org" target="_blank"&gt;Wikimapia.org&lt;/a&gt;'
+    }).addTo(map);
+
+
+    var wiki= new L.WikimapiaAPI({
+      key : 'WikipediaAPIKey'
+      , onActiveFeature: function (feature, layer) {
+        if (feature.name && feature.url) {
+            layer.bindPopup('&lt;a target="_blank" href="'+feature.url+'"&gt;'+ feature.name + '&lt;/a&gt;');
+        }
+      }
+      , style: function(feature) {
+        switch (feature.name) {
+            case 'Kitai-gorod': return {color: "#ff0000"};
+        }
+    }
+    });
+
+    wiki.addTo(map)
   </b>
 
 &lt;/script&gt;

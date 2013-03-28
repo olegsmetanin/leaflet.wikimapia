@@ -89,6 +89,7 @@ L.WikimapiaAPI = L.Class.extend({
         L.setOptions(that, options);
         that._hash = {};
         that._mouseIsDown = false;
+        that._popupIsOpen = false;
     }
 
     , setOptions: function (newOptions) {
@@ -110,6 +111,8 @@ L.WikimapiaAPI = L.Class.extend({
         map.on('mouseout', that._mouseout, that);
         map.on('mousedown', that._mousedown, that);
         map.on('mouseup', that._mouseup, that);
+        map.on('popupopen', that._popup_open, that);
+        map.on('popupclose', that._popup_close, that);
 
         that._update();
     }
@@ -124,6 +127,9 @@ L.WikimapiaAPI = L.Class.extend({
         map.off('mouseout', that._mouseout, that);
         map.off('mousedown', that._mousedown, that);
         map.off('mouseup', that._mouseup, that);
+        map.off('popupopen', that._popup_open, that);
+        map.off('popupclose', that._popup_close, that);
+
 
     }
 
@@ -151,7 +157,7 @@ L.WikimapiaAPI = L.Class.extend({
     , _hideFeature: function () {
     	var that = this;
 
-		if (that._feature) {
+		if (that._feature && !that._popupIsOpen) {
 				that._feature.polygon.off('mouseout');
 				that._map.removeLayer(that._feature.polygon);
 				that._feature = null;
@@ -161,7 +167,7 @@ L.WikimapiaAPI = L.Class.extend({
     , _showFeature:function(feature) {
     	var that = this;
 
-		if (!(that._feature && that._feature.id==feature.id)) {
+		if (!((that._feature && that._feature.id==feature.id) || that._popupIsOpen)) {
 			that._hideFeature();
 
 			that._feature = feature;
@@ -213,6 +219,17 @@ L.WikimapiaAPI = L.Class.extend({
     , _mouseout: function () {
 		this._hideFeature();
     }
+
+    , _popup_open: function () {
+    	this._popupIsOpen = true;
+    }
+
+    , _popup_close: function () {
+    	this._popupIsOpen = false;
+    }
+
+
+
 
     , _chooseBestFeature: function (features) {
 		var that = this
