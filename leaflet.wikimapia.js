@@ -7,11 +7,13 @@
 L.WikimapiaJSON = L.FeatureGroup.extend({
 
 	initialize: function (wikijson, options) {
-		var i, j;
+    	var that = this
+    		, i
+    		, j;
 
-		L.setOptions(this, options);
+		L.setOptions(that, options);
 
-		this._layers = {};
+		that._layers = {};
 
 		if (wikijson && wikijson.folder.length>0) {
 			for (i=0;i<wikijson.folder.length;i++) {
@@ -25,32 +27,36 @@ L.WikimapiaJSON = L.FeatureGroup.extend({
 					var layer = new L.Polygon(coords);
 					layer.feature = wikijson.folder[i];
 
-					this.resetStyle(layer);
+					that.resetStyle(layer);
 
 					if (options.onEachFeature) {
 						options.onEachFeature(layer.feature, layer);
 					}
 
-					this.addLayer(layer);
+					that.addLayer(layer);
 
 			}
 		}
 	}
 
 	, resetStyle: function (layer) {
-		var style = this.options.style;
+		var that = this
+			, style = this.options.style;
+
 		if (style) {
 			// reset any custom styles
 			L.Util.extend(layer.options, layer.defaultOptions);
 
-			this._setLayerStyle(layer, style);
+			that._setLayerStyle(layer, style);
 		}
 	}
 
 	, setStyle: function (style) {
-		this.eachLayer(function (layer) {
-			this._setLayerStyle(layer, style);
-		}, this);
+		var that = this;
+
+		that.eachLayer(function (layer) {
+			that._setLayerStyle(layer, style);
+		}, that);
 	}
 
 	, _setLayerStyle: function (layer, style) {
@@ -78,40 +84,46 @@ L.WikimapiaAPI = L.Class.extend({
     }
 
     , initialize: function (options) {
-        L.setOptions(this, options);
-        this._hash = {};
-        this._mouseIsDown = false;
+		var that = this;
+
+        L.setOptions(that, options);
+        that._hash = {};
+        that._mouseIsDown = false;
     }
 
     , setOptions: function (newOptions) {
-        L.setOptions(this, newOptions);
-        this._update();
+ 		var that = this;
+
+        L.setOptions(that, newOptions);
+        that._update();
     }
 
     , onAdd: function (map) {
-        this._map = map;
+ 		var that = this;
 
-        map.on('viewreset', this._update, this);
-        map.on('moveend', this._update, this);
-        map.on('zoomend', this._update, this);
-        map.on('mousemove', this._mousemove, this);
-        map.on('mouseout', this._mouseout, this);
-        map.on('mousedown', this._mousedown, this);
-        map.on('mouseup', this._mouseup, this);
+        that._map = map;
 
-        this._update();
+        map.on('viewreset', that._update, that);
+        map.on('moveend', that._update, that);
+        map.on('zoomend', that._update, that);
+        map.on('mousemove', that._mousemove, that);
+        map.on('mouseout', that._mouseout, that);
+        map.on('mousedown', that._mousedown, that);
+        map.on('mouseup', that._mouseup, that);
+
+        that._update();
     }
 
     , onRemove: function (map) {
+ 		var that = this;
 
-        map.off('viewreset', this._update, this);
-        map.off('moveend', this._update, this);
-        map.off('zoomend', this._update, this);
-        map.off('mousemove', this._mousemove, this);
-        map.off('mouseout', this._mouseout, this);
-        map.off('mousedown', this._mousedown, this);
-        map.off('mouseup', this._mouseup, this);
-
+        map.off('viewreset', that._update, that);
+        map.off('moveend', that._update, that);
+        map.off('zoomend', that._update, that);
+        map.off('mousemove', that._mousemove, that);
+        map.off('mouseout', that._mouseout, that);
+        map.off('mousedown', that._mousedown, that);
+        map.off('mouseup', that._mouseup, that);
 
     }
 
@@ -140,7 +152,7 @@ L.WikimapiaAPI = L.Class.extend({
     	var that = this;
 
 		if (that._feature) {
-				that._feature.polygon.unbindLabel();
+				that._feature.polygon.off('mouseout');
 				that._map.removeLayer(that._feature.polygon);
 				that._feature = null;
 			}
@@ -162,48 +174,44 @@ L.WikimapiaAPI = L.Class.extend({
 				that._feature.polygon.setStyle(that.options.style(that._feature));
 			}
 
-			that._feature.polygon.bindLabel(that._feature.name).addTo(that._map);
+			that._feature.polygon
+				.on('mouseout', function () {
+					that._hideFeature();
+				})
+				.bindLabel(that._feature.name)
+				.addTo(that._map);
 
 		}
     }
 
     , _mousemove: function (e) {
-
     	var that = this;
 
     	if (!that._mouseIsDown) {
+	    	var point = e.latlng
+	    		, features = that._filter(that._hash, function (item) {
+	    			return (item.bounds.contains(point) && that._pointInPolygon(point, item.polygon))
+	    		});
 
-	        if (that.mouseMoveTimer) {
-	        	window.clearTimeout(that.mouseMoveTimer);
-	        }
-
-			that.mouseMoveTimer = window.setTimeout(function() {
-
-
-		    	var point = e.latlng
-		    		, features = that._filter(that._hash, function (item) {
-		    			return (item.bounds.contains(point) && that._pointInPolygon(point, item.polygon))
-		    		});
-
-		    		if (features.length>0) {
-		    			var feature = (features.length == 1 ? features[0] : that._chooseBestFeature(features));
-		    			that._showFeature(feature);
-					} else {
-						that._hideFeature();
-					}
-
-		    }, 0);
+    		if (features.length>0) {
+    			var feature = (features.length == 1 ? features[0] : that._chooseBestFeature(features));
+    			that._showFeature(feature);
+			} else {
+				that._hideFeature();
+			}
     	}
     }
 
     , _mousedown: function () {
-    	var that = this;
-    	that._mouseIsDown = true;
+    	this._mouseIsDown = true;
     }
 
     , _mouseup: function () {
-    	var that = this;
-    	that._mouseIsDown = false;
+    	this._mouseIsDown = false;
+    }
+
+    , _mouseout: function () {
+		this._hideFeature();
     }
 
     , _chooseBestFeature: function (features) {
@@ -211,6 +219,7 @@ L.WikimapiaAPI = L.Class.extend({
 			, bestLookingArea = that._boundsArea(that._map.getBounds())/12
 			, bestFeatureIndex = 0
 			, bestFeatureScale = that._boundsArea(features[0].bounds)/bestLookingArea;
+
 		if (bestFeatureScale < 1) {bestFeatureScale = 1/bestFeatureScale}
 
 		for (var i=1; i<features.length;i++) {
@@ -232,11 +241,6 @@ L.WikimapiaAPI = L.Class.extend({
  			, ne = bounds.getNorthEast();
  		return (ne.lat-sw.lat)*(ne.lat-sw.lat)+(ne.lng-sw.lng)*(ne.lng-sw.lng)
  	}
-
-    , _mouseout: function () {
-		var that = this;
-		that._hideFeature();
-    }
 
     , _filter: function(obj, predicate) {
 		var res=[];

@@ -322,11 +322,38 @@ pre.prettyprint {
       L.control.scale().addTo(map);
 
       L.tileLayer('http://{s}.tile.cloudmade.com/BC9A493B41014CAABB98F0471D759707/997/256/{z}/{x}/{y}.png', {
-        maxZoom: 18,
-        attribution: 'Map data &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors, <a href="http://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, Imagery � <a href="http://cloudmade.com">CloudMade</a>'
+        maxZoom: 18
+        , attribution: 'Map data &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors, <a href="http://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, Imagery � <a href="http://cloudmade.com">CloudMade</a>'
       }).addTo(map);
 
 
+      /*
+       * Fix Leaflet 0.5.1 L.Util.template for Wikimapia tile layer url hash property
+       * If property is function  - call it
+       */
+
+      L.Util.template = function (str, data) {
+        return str.replace(/\{ *([\w_]+) *\}/g, function (str, key) {
+          var value = data[key];
+          if (!data.hasOwnProperty(key)) {
+            throw new Error('No value provided for variable ' + str);
+          } else if (typeof value === 'function') {
+            value = value(data);
+          }
+
+          return value;
+        });
+      }
+
+      L.tileLayer('http://{s}{hash}.wikimapia.org/?x={x}&y={y}&zoom={z}&r=7071412&type=&lng=1', {
+        // Fix L.Util.template to use this
+        hash: function (data) {
+          return data.x % 4 + (data.y % 4) *4;
+        }
+        , subdomains : 'i'
+        , maxZoom: 18
+        , attribution: '<a href="http://wikimapia.org" target="_blank">Wikimapia.org</a>'
+      }).addTo(map);
 
       var wiki= new L.WikimapiaAPI({
         key : '60175C48-4B0C86C-A2D4D106-A5F37CAF-5A760C96-45526DF2-6D90C63B-511E68EE'
